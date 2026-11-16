@@ -1,0 +1,27 @@
+groups:
+  - name: shopstream
+    rules:
+      # The alert that pages for every hiccup: any 5xx in the last 30 s, no "for".
+      - alert: AnyCheckoutError
+        expr: sum(increase(http_requests_total{service="checkout",status=~"5.."}[30s])) > 0
+        labels: {severity: page, kind: noisy}
+        annotations: {summary: "A checkout returned 5xx"}
+      # The alert worth waking up for: more than 5% of checkouts fail, for 30 s.
+      - alert: CheckoutErrorRateHigh
+        expr: |
+          sum(rate(http_requests_total{service="checkout",status=~"5.."}[1m]))
+            / sum(rate(http_requests_total{service="checkout"}[1m])) > 0.05
+        for: 30s
+        labels: {severity: page, kind: symptom}
+        annotations: {summary: "More than 5% of checkouts are failing"}
+      # Day 4: causes, caught before (or while) customers notice.
+      - alert: InventoryPoolSaturated
+        expr: max(db_pool_in_use{service="inventory"}) / max(db_pool_size{service="inventory"}) >= 0.8
+        for: 10s
+        labels: {severity: page, kind: cause}
+        annotations: {summary: "Inventory's connection pool is at least 80% in use"}
+      - alert: CheckoutMemoryLeak
+        expr: deriv(process_resident_memory_bytes{instance="checkout:8000"}[1m]) > 500000
+        for: 15s
+        labels: {severity: ticket, kind: cause}
+        annotations: {summary: "Checkout's memory grows faster than 0.5 MB/s"}

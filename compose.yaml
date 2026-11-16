@@ -1,0 +1,40 @@
+# ShopStream: three Python services, Jaeger, Prometheus and Grafana. No bind mounts: everything is built into the image.
+x-app: &app
+  build: .
+  image: shopstream-otel-app:latest
+  restart: unless-stopped
+  depends_on: [jaeger]
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports: ["16686:16686"]
+  prometheus:
+    build: ./prometheus
+    image: shopstream-otel-prometheus:latest
+    ports: ["9090:9090"]
+  grafana:
+    build: ./grafana
+    image: shopstream-otel-grafana:latest
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+  checkout:
+    <<: *app
+    environment: {SERVICE: checkout}
+    ports: ["8101:8000"]
+  inventory:
+    <<: *app
+    environment: {SERVICE: inventory}
+    ports: ["8102:8000"]
+  payments:
+    <<: *app
+    environment: {SERVICE: payments}
+    ports: ["8103:8000"]
+  tools:
+    <<: *app
+    restart: "no"
+    profiles: ["tools"]
+    command: ["python", "-c", "print('tools')"]
+    working_dir: /srv/tools

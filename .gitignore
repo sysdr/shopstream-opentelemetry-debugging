@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+shopstream-otel/
+POSTMORTEM.md
+MY_POSTMORTEM.md
